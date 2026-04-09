@@ -1,0 +1,38 @@
+name: 酒單自動同步
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 檢查程式碼
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # 確保獲取完整的歷史紀錄以利合併
+
+    - name: 設定 Python 環境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: 安裝必要套件
+      run: pip install pandas requests
+
+    - name: 執行資料抓取
+      run: python fetch_wines.py
+
+    - name: 更新資料庫檔案
+      run: |
+        git config --global user.name "YK-SommBot"
+        git config --global user.email "bot@github.com"
+        git add wine_data.json
+        # 即使沒有變更也不要報錯
+        git commit -m "自動更新：同步酒單資料" || exit 0
+        # 先拉取遠端變更並合併，避免衝突
+        git pull --rebase origin main
+        # 推送回遠端
+        git push origin main
