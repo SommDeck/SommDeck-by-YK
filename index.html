@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Wine List | The Grill by A Cut</title>
     
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231a1a1a%22/><path d=%22M25 42 Q45 35 75 42 L70 48 Q45 40 30 50 L25 42 M48 48 C48 48 46 75 58 85 C42 80 42 55 42 48 Z%22 fill=%22%23af9462%22/><circle cx=%2240%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2245%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2250%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231a1a1a%22/><path d=%22M25 42 Q45 35 75 42 L70 48 Q45 40 30 50 L25 42 M48 48 C48 48 46 75 58 85 C42 80 42 55 42 48 Z%22 fill=%22%23af9462%22/><circle cx=%2240%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2245%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2250%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/></svg>">
-    <title>Wine List | The Grill by A Cut</title>
+
     <style>
         :root { 
             --steakhouse-black: #1a1a1a; 
@@ -18,9 +19,13 @@
             --light-grey: #bbb;
             --admin-red: #8b0000;
         }
-        body { background-color: #111; font-family: var(--font-main); margin: 0; -webkit-font-smoothing: antialiased; }
 
-        /* Loading 畫面 */
+        /* 基礎樣式與滾動條 */
+        body { background-color: #111; font-family: var(--font-main); margin: 0; -webkit-font-smoothing: antialiased; color: #333; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--gold); }
+
+        /* [UI] Loading 畫面 */
         #loader { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.9); z-index: 4000;
@@ -29,10 +34,10 @@
         .loader-text { color: var(--gold); font-family: var(--font-data); font-size: 1.2rem; letter-spacing: 4px; animation: breathe 2s infinite ease-in-out; }
         @keyframes breathe { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-        /* UI 控制元件 */
+        /* [UI] 導航與搜尋控制項 */
         .search-wrapper { position: fixed; top: 20px; right: 20px; z-index: 1200; }
-        .search-input { background-color: rgba(0,0,0,0.85); border: 1px solid var(--gold); color: var(--gold); padding: 12px 15px; font-family: var(--font-data); width: 140px; outline: none; transition: 0.3s; }
-        .search-input:focus { width: 220px; border-color: #fff; }
+        .search-input { background-color: rgba(0,0,0,0.85); border: 1px solid var(--gold); color: var(--gold); padding: 12px 15px; font-family: var(--font-data); width: 140px; outline: none; transition: 0.3s; border-radius: 0; }
+        .search-input:focus { width: 220px; border-color: #fff; background-color: #000; }
 
         .open-btn { 
             display: flex; align-items: center; gap: 8px;
@@ -42,12 +47,13 @@
         }
         .open-btn.active-menu { background-color: var(--gold); color: #000; left: 210px; }
 
-        /* 側邊欄 */
+        /* [UI] 側邊欄 (Menu & Filter) */
         .sidenav { height: 100%; width: 0; position: fixed; z-index: 1300; top: 0; left: 0; background-color: var(--steakhouse-black); overflow-x: hidden; transition: 0.5s; display: flex; flex-direction: column; border-right: 1px solid var(--gold); }
         .nav-links { flex: 1; padding-top: 80px; overflow-y: auto; }
-        .sidenav a { padding: 15px 32px; text-decoration: none; font-size: 0.9rem; color: var(--gold); display: block; cursor: pointer; }
+        .sidenav a { padding: 15px 32px; text-decoration: none; font-size: 0.9rem; color: var(--gold); display: block; cursor: pointer; border-left: 0 solid var(--gold); transition: 0.2s; }
+        .sidenav a:hover { background: #222; border-left: 5px solid var(--gold); }
         
-        /* 價格篩選器 */
+        /* 價格篩選器樣式 */
         .price-filter-section { padding: 20px 32px; border-top: 1px solid #333; background: #111; }
         .reset-btn { background: none; border: 1px solid #444; color: #888; font-size: 0.6rem; padding: 2px 6px; cursor: pointer; font-family: var(--font-data); vertical-align: middle; margin-left: 8px; transition: 0.3s; }
         .reset-btn:hover { border-color: var(--gold); color: var(--gold); }
@@ -58,55 +64,54 @@
         .price-input-flex { display: flex; justify-content: space-between; margin-top: 15px; }
         .price-box-input { background: #000; border: 1px solid #444; color: #fff; width: 45%; font-size: 0.65rem; padding: 5px; text-align: center; font-family: var(--font-data); }
 
-        /* 主酒單容器 */
+        /* [UI] 主內容區 */
         .menu-container { max-width: 900px; margin: 100px auto 40px; background: var(--paper); padding: 60px; border: 1px solid var(--gold); min-height: 80vh; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         header { text-align: center; margin-bottom: 60px; border-bottom: 1px solid var(--gold); padding-bottom: 40px; }
         
-        /* 彈窗 Modal */
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); overflow-y: auto; }
-        .close-modal-fixed { 
-            position: fixed; 
-            top: 25px; 
-            right: 30px; 
-            font-size: 50px; 
-            cursor: pointer; 
-            color: var(--gold); 
-            z-index: 2500;
-            line-height: 1; 
-            text-shadow: 0 0 15px rgba(0,0,0,0.8);
-            display: none;
-        }
-        .modal-content { background: var(--paper); margin: 30px auto; padding: 40px; border: 1px solid var(--gold); width: 90%; max-width: 500px; position: relative; box-sizing: border-box; }
-        
+        /* [UI] 酒款列表項目 */
         .wine-item { cursor: pointer; display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; border-bottom: 1px solid #eee; padding-bottom: 25px; transition: 0.2s; }
-        .wine-item.sold-out { opacity: 0.6; }
+        .wine-item:hover { transform: translateY(-2px); }
+        .wine-item.sold-out { opacity: 0.5; filter: grayscale(1); }
         .wine-name-row { font-size: 1.35rem; font-weight: 700; color: var(--steakhouse-black); line-height: 1.2; flex: 1; padding-right: 20px; }
-        .sold-out-badge { font-size: 0.6rem; background: #888; color: #fff; padding: 2px 6px; margin-left: 10px; border-radius: 2px; vertical-align: middle; font-family: var(--font-data); font-weight: 400; display: inline-block; }
+        .sold-out-badge { font-size: 0.6rem; background: #888; color: #fff; padding: 2px 6px; margin-left: 10px; border-radius: 2px; vertical-align: middle; font-family: var(--font-data); }
         .price-box { display: grid; grid-template-columns: 35px 1fr; align-items: baseline; width: 150px; font-weight: 600; font-size: 1.35rem; border-bottom: 2px solid #000; padding-bottom: 5px; font-family: var(--font-data); flex-shrink: 0; }
         .price-box span:first-child { font-size: 0.8rem; color: var(--gold); font-weight: 400; }
         .price-box span:last-child { text-align: right; }
+
+        /* [UI] 彈窗 Modal */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); overflow-y: auto; }
+        .close-modal-fixed { position: fixed; top: 25px; right: 30px; font-size: 50px; cursor: pointer; color: var(--gold); z-index: 2500; display: none; line-height: 1; text-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        .modal-content { background: var(--paper); margin: 30px auto; padding: 40px; border: 1px solid var(--gold); width: 90%; max-width: 500px; position: relative; box-sizing: border-box; }
+        
+        /* 售罄提示與管理介面 */
         .somm-interaction-tip { background: #f9f6f0; border: 1px solid var(--gold); color: #6e5a3a; padding: 15px; font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5; font-style: italic; display: none; }
         .admin-editor-zone { background: #fdf2f2; padding: 15px; border: 1px dashed var(--admin-red); margin-bottom: 20px; }
         .admin-label { font-size: 0.6rem; color: #666; display: block; margin-bottom: 4px; font-weight: 600; }
         .admin-input { width: 100%; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; box-sizing: border-box; font-family: var(--font-data); }
         .save-btn { width: 100%; background: var(--admin-red); color: #fff; border: none; padding: 14px; cursor: pointer; font-weight: 600; font-family: var(--font-data); transition: 0.3s; }
+
         .signature-footer { text-align: center; margin-top: 60px; font-size: 0.7rem; color: #999; border-top: 1px solid #ddd; padding-top: 30px; line-height: 1.6; font-family: var(--font-data); }
-        @media (max-width: 600px) { .menu-container { padding: 30px 20px; } .price-box { width: 140px; } .close-modal-fixed { right: 20px; top: 20px; } }
+
+        @media (max-width: 600px) { 
+            .menu-container { padding: 30px 20px; margin-top: 80px; } 
+            .price-box { width: 130px; font-size: 1.1rem; } 
+            .close-modal-fixed { right: 20px; top: 20px; } 
+        }
     </style>
 </head>
 <body>
 
-    <div id="loader"><div class="loader-text">Sourcing from the Cellar...</div></div>
-    
+    <div id="loader"><div class="loader-text">SOURCING FROM THE CELLAR...</div></div>
     <span class="close-modal-fixed" id="fixedCloseBtn" onclick="closeModal()">&times;</span>
 
-    <div class="search-wrapper"><input type="text" id="wineSearch" class="search-input" placeholder="Search..." oninput="filterWines()"></div>
+    <div class="search-wrapper"><input type="text" id="wineSearch" class="search-input" placeholder="Search Wine/Ref..." oninput="filterWines()"></div>
     <span class="open-btn" id="mainMenuBtn" onclick="toggleNav()">
         <span id="menuIcon">☰</span> <span id="btnText">Menu</span>
     </span>
 
     <div id="mySidenav" class="sidenav">
         <div class="nav-links" id="dynamicNav"></div>
+        
         <div class="price-filter-section">
             <div style="color:var(--gold); font-size:0.7rem; letter-spacing:2px; margin-bottom:15px; font-family: var(--font-data);">
                 Price Range (NT$) <button class="reset-btn" onclick="resetPriceRange()">Reset↺</button>
@@ -121,6 +126,7 @@
                 <input type="number" id="maxPriceInput" class="price-box-input" value="150000" step="500" oninput="updateSliderTwo()">
             </div>
         </div>
+
         <div id="adminPortalArea">
             <div class="admin-entry" onclick="promptAdmin()" style="padding:20px; color:#555; font-size:0.7rem; cursor:pointer; text-align:center;">Staff Access</div>
         </div>
@@ -154,7 +160,7 @@
     <div id="main">
         <div class="menu-container">
             <header>
-                <div style="letter-spacing:4px; color:var(--gold); font-size:0.8rem; font-weight:600; margin-bottom:10px;">The Grill by A Cut</div>
+                <div style="letter-spacing:4px; color:var(--gold); font-size:0.8rem; font-weight:600; margin-bottom:10px;">THE GRILL BY A CUT</div>
                 <h1 id="pageTitle" style="color:#1a1a1a; letter-spacing: 2px;">Wine List</h1>
             </header>
             <div id="wineList"></div>
@@ -163,34 +169,41 @@
     </div>
 
     <script>
+        /**
+         * 系統設定與全域變數
+         */
         const gasUrl = "https://script.google.com/macros/s/AKfycbzub2iPaJYGNF8hoavRM_UBvySTWgMrdBuDssni86VVSLQVF15OCP0JloTvIgw95Oo8lg/exec";
         let inventory = [], activeCat = 'All', isAdmin = false, navOpen = false, currentWine = null;
         
-        const authConfig = {
-            "0000": "Somm_A",
-            "0001": "Somm_B",
-            "0002": "Somm_C",
-            "0003": "Somm_D",
-            "9029": "YK"
-        };
+        const authConfig = { "0000": "Somm_A", "0001": "Somm_B", "0002": "Somm_C", "0003": "Somm_D", "9029": "YK" };
         let staffName = "Digital Menu";
 
+        // 輔助函式：標準化搜尋文字（去符號、小寫）
         const normalizeText = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+        /**
+         * [Data] 資料讀取邏輯
+         */
         async function loadData(isSilent = false) {
             if(!isSilent) document.getElementById('loader').style.display = 'flex';
             try {
                 const response = await fetch(`${gasUrl}?t=${Date.now()}`);
                 const data = await response.json();
+                
+                // 首次讀取才渲染導航列
                 if (!isSilent) renderNav(data.categories);
+                
+                // 格式化庫存資料 (對應 Spreadsheet 欄位)
                 inventory = data.wines.map(r => ({
                     bin: String(r[0]||""), ref: String(r[1]||""), country: r[2]||"", region: r[3]||"",
                     name: String(r[4]||""), year: String(r[5]||""), size: String(r[6]||""),
                     price: r[8]||0, stock: parseInt(r[11]||0), desc: r[13]||"", photo: r[14]||"",
                     category: r[r.length - 1] 
                 }));
+                
                 filterWines();
 
+                // 若 Modal 開著且資料更新，同步 Modal 內容
                 if (document.getElementById("wineModal").style.display === "block" && currentWine) {
                     const fresh = inventory.find(w => w.name === currentWine.name && w.year === currentWine.year);
                     if (fresh) {
@@ -199,30 +212,28 @@
                         if(isAdmin) document.getElementById("editStock").value = fresh.stock;
                     }
                 }
-            } catch (e) { console.error("Sync Error"); }
+            } catch (e) { console.error("Sync Error:", e); }
             document.getElementById('loader').style.display = 'none';
         }
 
-        function resetPriceRange() {
-            document.getElementById("slider-1").value = 0;
-            document.getElementById("slider-2").value = 150000;
-            document.getElementById("minPriceInput").value = 0;
-            document.getElementById("maxPriceInput").value = 150000;
-            fillColor();
-            filterWines();
-        }
-
+        /**
+         * [Render] 渲染邏輯
+         */
         function renderNav(categories) {
             const nav = document.getElementById('dynamicNav');
             nav.innerHTML = `<a onclick="renderCategory('All')">All Wines</a><hr style="border:0; border-top:1px solid #333; margin: 10px 30px;">`;
             categories.forEach(cat => {
-                const a = document.createElement('a'); a.onclick = () => renderCategory(cat); a.innerText = cat;
+                const a = document.createElement('a'); 
+                a.onclick = () => renderCategory(cat); 
+                a.innerText = cat;
                 nav.appendChild(a);
             });
         }
 
         function renderWines(data) {
             const listArea = document.getElementById('wineList');
+            if(data.length === 0) { listArea.innerHTML = "<p style='text-align:center; color:#999; padding:40px;'>No wines found in this range.</p>"; return; }
+            
             listArea.innerHTML = data.map(wine => {
                 const isSoldOut = wine.stock <= 0;
                 return `
@@ -237,17 +248,25 @@
             }).join('');
         }
 
+        /**
+         * [Filter] 篩選邏輯
+         */
         function filterWines() {
             const query = normalizeText(document.getElementById('wineSearch').value);
             const min = parseInt(document.getElementById('minPriceInput').value) || 0;
             const max = parseInt(document.getElementById('maxPriceInput').value) || 999999;
             const base = (activeCat === 'All') ? inventory : inventory.filter(w => w.category === activeCat);
+            
             renderWines(base.filter(w => {
                 const p = parseInt(w.price);
-                return (p >= min && p <= max) && normalizeText(w.ref + w.name + w.year).includes(query);
+                const matchQuery = normalizeText(w.ref + w.name + w.year + w.country).includes(query);
+                return (p >= min && p <= max) && matchQuery;
             }));
         }
 
+        /**
+         * [Modal] 詳情彈窗控制
+         */
         function openWineModal(wine) {
             currentWine = wine;
             document.getElementById("modalWineName").innerText = wine.name + " " + wine.year;
@@ -260,6 +279,7 @@
             const img = document.getElementById("modalImage");
             if (wine.photo && wine.photo.startsWith("http")) { img.src = wine.photo; img.style.display = "block"; } else { img.style.display = "none"; }
             
+            // 管理介面切換
             document.getElementById("adminEditor").style.display = isAdmin ? "block" : "none";
             if(isAdmin) {
                 document.getElementById("adminBadge").innerText = `LOGGED IN AS: ${staffName.toUpperCase()}`;
@@ -278,11 +298,15 @@
             document.body.style.overflow = "auto"; 
         }
 
+        /**
+         * [Admin] 管理功能
+         */
         async function saveAdminChange() {
             const newBin = document.getElementById("editBin").value.trim();
             const newStock = document.getElementById("editStock").value.trim();
             const btn = document.getElementById("saveBtn");
             if (!newBin || newStock === "") { alert("Please enter valid Bin and Stock."); return; }
+            
             btn.innerText = "Updating Cellar..."; btn.disabled = true;
             try {
                 await fetch(gasUrl, {
@@ -292,11 +316,12 @@
                         year: currentWine.year, newBin: newBin, newStock: newStock, staff: staffName 
                     })
                 });
+                // 更新 UI 狀態
                 currentWine.bin = newBin; currentWine.stock = parseInt(newStock);
                 document.getElementById("modalMetaInfo").innerText = `BIN: ${newBin} | REF: ${currentWine.ref} | ${currentWine.size} | Stock: ${newStock}`;
                 btn.innerText = "✓ Success"; btn.style.background = "#2e7d32";
                 setTimeout(resetBtnState, 2000);
-                loadData(true);
+                loadData(true); // 背景刷新數據
             } catch (e) { btn.innerText = "Error"; btn.disabled = false; }
         }
 
@@ -305,7 +330,6 @@
         function promptAdmin() {
             const code = prompt("Enter Staff Access Code:");
             if (authConfig.hasOwnProperty(code)) {
-                // 登入成功邏輯：移除 alert，設置狀態並收起 Menu
                 isAdmin = true;
                 staffName = authConfig[code];
                 document.getElementById("adminPortalArea").innerHTML = `
@@ -313,15 +337,13 @@
                         <div style="color:var(--gold); font-size:0.6rem; margin-bottom:10px;">Logged in as: ${staffName}</div>
                         <button onclick="location.reload()" style="background:none; border:1px solid var(--admin-red); color:var(--admin-red); cursor:pointer; padding:5px 10px; font-family:var(--font-data);">Logout</button>
                     </div>`;
-                
-                // 自動收起選單
                 if (navOpen) toggleNav();
-                
-            } else if (code !== null) {
-                alert("Invalid Access Code.");
-            }
+            } else if (code !== null) { alert("Invalid Access Code."); }
         }
 
+        /**
+         * [UI Utility] 介面小工具 (Nav, Slider)
+         */
         function toggleNav() {
             const s = document.getElementById("mySidenav"), b = document.getElementById("mainMenuBtn");
             const icon = document.getElementById("menuIcon"), text = document.getElementById("btnText");
@@ -336,8 +358,17 @@
 
         function renderCategory(cat) { activeCat = cat; document.getElementById('pageTitle').innerText = (cat === 'All' ? 'Wine List' : cat); if (navOpen) toggleNav(); filterWines(); }
         
-        function slideOne() { let s1 = document.getElementById("slider-1"), s2 = document.getElementById("slider-2"); if (parseInt(s2.value) - parseInt(s1.value) <= 1000) s1.value = parseInt(s2.value) - 1000; document.getElementById("minPriceInput").value = s1.value; fillColor(); filterWines(); }
-        function slideTwo() { let s1 = document.getElementById("slider-1"), s2 = document.getElementById("slider-2"); if (parseInt(s2.value) - parseInt(s1.value) <= 1000) s2.value = parseInt(s1.value) + 1000; document.getElementById("maxPriceInput").value = s2.value; fillColor(); filterWines(); }
+        // 價格拉桿聯動
+        function slideOne() { 
+            let s1 = document.getElementById("slider-1"), s2 = document.getElementById("slider-2"); 
+            if (parseInt(s2.value) - parseInt(s1.value) <= 1000) s1.value = parseInt(s2.value) - 1000; 
+            document.getElementById("minPriceInput").value = s1.value; fillColor(); filterWines(); 
+        }
+        function slideTwo() { 
+            let s1 = document.getElementById("slider-1"), s2 = document.getElementById("slider-2"); 
+            if (parseInt(s2.value) - parseInt(s1.value) <= 1000) s2.value = parseInt(s1.value) + 1000; 
+            document.getElementById("maxPriceInput").value = s2.value; fillColor(); filterWines(); 
+        }
         function fillColor() { 
             let s1 = document.getElementById("slider-1"), s2 = document.getElementById("slider-2"); 
             let p1 = (s1.value/150000)*100, p2 = (s2.value/150000)*100; 
@@ -345,14 +376,19 @@
         }
         function updateSliderOne() { document.getElementById("slider-1").value = document.getElementById("minPriceInput").value; fillColor(); filterWines(); }
         function updateSliderTwo() { document.getElementById("slider-2").value = document.getElementById("maxPriceInput").value; fillColor(); filterWines(); }
+        function resetPriceRange() {
+            document.getElementById("slider-1").value = 0; document.getElementById("slider-2").value = 150000;
+            document.getElementById("minPriceInput").value = 0; document.getElementById("maxPriceInput").value = 150000;
+            fillColor(); filterWines();
+        }
 
+        // 點擊 Modal 外部關閉
         window.onclick = e => { if (e.target.className === "modal") closeModal(); }
         
+        // 啟動與自動定時刷新 (每 5 秒同步一次庫存)
         loadData();
+        setInterval(() => loadData(true), 5000);
 
-        setInterval(() => {
-            loadData(true);
-        }, 5000);
     </script>
 </body>
 </html>
