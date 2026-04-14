@@ -7,7 +7,6 @@
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231a1a1a%22/><path d=%22M25 42 Q45 35 75 42 L70 48 Q45 40 30 50 L25 42 M48 48 C48 48 46 75 58 85 C42 80 42 55 42 48 Z%22 fill=%22%23af9462%22/><circle cx=%2240%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2245%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2250%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231a1a1a%22/><path d=%22M25 42 Q45 35 75 42 L70 48 Q45 40 30 50 L25 42 M48 48 C48 48 46 75 58 85 C42 80 42 55 42 48 Z%22 fill=%22%23af9462%22/><circle cx=%2240%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2245%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/><circle cx=%2250%22 cy=%2243%22 r=%221.5%22 fill=%22%23af9462%22/></svg>">
-
     <title>Wine List | The Grill by A Cut</title>
     <style>
         :root { 
@@ -135,7 +134,7 @@
             </div>
 
             <div id="adminEditor" class="admin-editor-zone" style="display:none;">
-                <div style="color:var(--admin-red); font-size:0.7rem; font-weight:700; margin-bottom:12px; letter-spacing:1px;">CELLAR MANAGEMENT</div>
+                <div id="adminBadge" style="color:var(--admin-red); font-size:0.7rem; font-weight:700; margin-bottom:12px; letter-spacing:1px;">CELLAR MANAGEMENT</div>
                 <label class="admin-label">LOCATION (BIN)</label>
                 <input type="text" id="editBin" class="admin-input" placeholder="Bin Location">
                 <label class="admin-label">STOCK QUANTITY</label>
@@ -166,6 +165,15 @@
     <script>
         const gasUrl = "https://script.google.com/macros/s/AKfycbzub2iPaJYGNF8hoavRM_UBvySTWgMrdBuDssni86VVSLQVF15OCP0JloTvIgw95Oo8lg/exec";
         let inventory = [], activeCat = 'All', isAdmin = false, navOpen = false, currentWine = null;
+        
+        const authConfig = {
+            "0000": "Somm_A",
+            "0001": "Somm_B",
+            "0002": "Somm_C",
+            "0003": "Somm_D",
+            "9029": "YK"
+        };
+        let staffName = "Digital Menu";
 
         const normalizeText = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -183,7 +191,6 @@
                 }));
                 filterWines();
 
-                // 刷新時如果彈窗開著，同步更新內容
                 if (document.getElementById("wineModal").style.display === "block" && currentWine) {
                     const fresh = inventory.find(w => w.name === currentWine.name && w.year === currentWine.year);
                     if (fresh) {
@@ -255,18 +262,19 @@
             
             document.getElementById("adminEditor").style.display = isAdmin ? "block" : "none";
             if(isAdmin) {
+                document.getElementById("adminBadge").innerText = `LOGGED IN AS: ${staffName.toUpperCase()}`;
                 document.getElementById("editBin").value = wine.bin;
                 document.getElementById("editStock").value = wine.stock;
                 resetBtnState();
             }
             document.getElementById("wineModal").style.display = "block";
-            document.getElementById("fixedCloseBtn").style.display = "block"; // 顯示固定關閉鈕
+            document.getElementById("fixedCloseBtn").style.display = "block";
             document.body.style.overflow = "hidden";
         }
 
         function closeModal() { 
             document.getElementById("wineModal").style.display = "none"; 
-            document.getElementById("fixedCloseBtn").style.display = "none"; // 隱藏固定關閉鈕
+            document.getElementById("fixedCloseBtn").style.display = "none"; 
             document.body.style.overflow = "auto"; 
         }
 
@@ -281,7 +289,7 @@
                     method: "POST", mode: "no-cors",
                     body: JSON.stringify({ 
                         oldBin: currentWine.bin, ref: currentWine.ref || "", name: currentWine.name, 
-                        year: currentWine.year, newBin: newBin, newStock: newStock, staff: "Digital Menu" 
+                        year: currentWine.year, newBin: newBin, newStock: newStock, staff: staffName 
                     })
                 });
                 currentWine.bin = newBin; currentWine.stock = parseInt(newStock);
@@ -295,9 +303,22 @@
         function resetBtnState() { const btn = document.getElementById("saveBtn"); btn.innerText = "Save Changes"; btn.style.background = "var(--admin-red)"; btn.disabled = false; }
 
         function promptAdmin() {
-            if (prompt("Enter Staff Access Code:") === "0000") {
+            const code = prompt("Enter Staff Access Code:");
+            if (authConfig.hasOwnProperty(code)) {
+                // 登入成功邏輯：移除 alert，設置狀態並收起 Menu
                 isAdmin = true;
-                document.getElementById("adminPortalArea").innerHTML = `<div style="padding:20px; text-align:center;"><button onclick="location.reload()" style="background:none; border:1px solid var(--admin-red); color:var(--admin-red); cursor:pointer; padding:5px 10px; font-family:var(--font-data);">Logout</button></div>`;
+                staffName = authConfig[code];
+                document.getElementById("adminPortalArea").innerHTML = `
+                    <div style="padding:20px; text-align:center;">
+                        <div style="color:var(--gold); font-size:0.6rem; margin-bottom:10px;">Logged in as: ${staffName}</div>
+                        <button onclick="location.reload()" style="background:none; border:1px solid var(--admin-red); color:var(--admin-red); cursor:pointer; padding:5px 10px; font-family:var(--font-data);">Logout</button>
+                    </div>`;
+                
+                // 自動收起選單
+                if (navOpen) toggleNav();
+                
+            } else if (code !== null) {
+                alert("Invalid Access Code.");
             }
         }
 
@@ -329,7 +350,6 @@
         
         loadData();
 
-        // 彈窗開啟期間依然保持背景刷新
         setInterval(() => {
             loadData(true);
         }, 5000);
