@@ -1,4 +1,4 @@
-name: 酒單自動同步
+name: Auto Sync
 
 on:
   schedule:
