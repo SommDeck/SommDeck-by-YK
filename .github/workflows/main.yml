@@ -5,17 +5,20 @@ on:
     - cron: '*/30 * * * *'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - name: 檢查程式碼
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.2.2
       with:
         fetch-depth: 0 
 
     - name: 設定 Python 環境
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v5.4.0
       with:
         python-version: '3.9'
 
