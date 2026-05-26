@@ -1,54 +1,67 @@
+# =================================================================================
+# 
+# 專案名稱：電子酒單&庫存前後端管理系統 (GitHub Actions自動同步排程)
+# 開發設計：Sommelier Yannick "Y.K." Liu
+# 版權所有 (c) 2026 Yannick "Y.K." Liu. 保留所有權利。
+#
+# =================================================================================
+
 name: Auto Sync
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # 每 30 分鐘自動執行一次
-  workflow_dispatch: # 允許手動點擊執行
+    - cron: '*/30 * * * *' # 每30分鐘自動定時執行一次
+  workflow_dispatch:      # 允許在GitHub Actions頁面手動點擊觸發執行
 
-# 防止GitHub預設安全性原則阻擋
+# 顯式授權權限，允許Actions機器人將更新後的資料回寫至儲存庫
 permissions:
   contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
-    - name: 檢查程式碼
+    - name: 1. 檢查並拉取專案原始碼
       uses: actions/checkout@v4.2.2
       with:
-        fetch-depth: 0 
+        fetch-depth: 0 # 完整拉取歷史紀錄
 
-    - name: 設定 Python 環境
+    - name: 2. 初始化Python環境
       uses: actions/setup-python@v5.4.0
       with:
         python-version: '3.10'
-        cache: 'pip'
+        cache: 'pip' # 開啟pip快取機制
 
-    - name: 必要套件
+    - name: 3. 安裝必要第三方套件
       run: |
         python -m pip install --upgrade pip
         pip install pandas requests
 
-    - name: 資料抓取
+    - name: 4. 執行資料抓取與清洗(GSA動態同步)
+      # 執行Python腳本
       run: python fetch_wines.py
 
-    - name: 更新資料
+    - name: 5. 檢查變更並自動提交推送
       run: |
-        git config --global user.name "github-actions[bot]"
+        # 設定GitHub Actions虛擬機器人身份
+        git config --global user.name "YK-SommBot"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
         
+        # 將產出的前端JSON資料夾加入暫存區
         git add wine_data.json
         
-        # 檢查是否有檔案變更
+        # 安全檢查：若資料與前一次無異動，則直接結束流程
         if git diff --staged --quiet; then
-          echo "資料無變更，跳過更新。"
+          echo "數據與遠端同步，無變更，跳過更新。"
           exit 0
         fi
         
-        git commit -m "自動同步：更新電子酒單與庫存數據 [skip ci]"
+        # [skip ci]防止觸發額外的CI迴圈
+        git commit -m "chore(auto-sync): 自動同步：更新電子酒單與庫存數據[skip ci]"
         
-        # 先拉取遠端變更並合併，避免多人協作衝突
+        # rebase機制拉取遠端最新狀態
         git pull --rebase origin main
         
-        # 推送回遠端 GitHub 儲存庫
+        # 數據推送回GitHub遠端主分支
         git push origin main
