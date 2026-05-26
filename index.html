@@ -198,7 +198,7 @@
 
         const normalizeText = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-        //載入邏輯
+        // 載入與解析邏輯
         async function loadData(isSilent = false) {
             if(!isSilent) document.getElementById('loader').style.display = 'flex';
             try {
@@ -206,43 +206,46 @@
                 const data = await response.json();
                 if (!isSilent) renderNav(data.categories);
                 
-                //解析資料
+                // 解析資料物件
                 const fetchedWines = data.wines.map(r => ({
-                    bin: String(r[0]||""), ref: String(r[1]||""), country: r[2]||"", region: r[3]||"",
-                    name: String(r[4]||""), year: String(r[5]||""), size: String(r[6]||""),
-                    price: r[8]||0, stock: parseInt(r[11]||0), 
-                    desc: r[13]||"", photo: r[14]||"",
-                    category: r[r.length - 1] 
+                    bin: String(r.bin || ""), 
+                    ref: String(r.ref || ""), 
+                    country: r.country || "", 
+                    region: r.region || "",
+                    name: String(r.item || ""),
+                    year: String(r.vintage || ""),
+                    size: String(r.volume || ""),
+                    price: r.price || 0, 
+                    stock: parseInt(r.ending || 0),
+                    desc: r.description || "",
+                    photo: r.url || "",
+                    category: r.sheet_category || ""
                 }));
 
-                //背景同步
+                // 背景即時同步
                 if (isSilent && inventory.length === fetchedWines.length) {
                     fetchedWines.forEach(newWine => {
                         const oldWine = inventory.find(w => w.ref === newWine.ref);
                         if (oldWine) {
-                            //局部DOM更新
                             if (oldWine.stock !== newWine.stock || oldWine.bin !== newWine.bin) {
                                 oldWine.stock = newWine.stock;
                                 oldWine.bin = newWine.bin;
                                 
-                                //視覺狀態
+                                // 局部網頁視覺刷新
                                 const wineDOM = document.querySelector(`[data-ref="${newWine.ref}"]`);
                                 if (wineDOM) {
                                     const isSoldOut = newWine.stock <= 0;
-                                    //灰階
                                     if (isSoldOut) wineDOM.classList.add('sold-out');
                                     else wineDOM.classList.remove('sold-out');
                                     
-                                    //SOLD OUT
                                     const badge = wineDOM.querySelector('.badge-sold-out');
                                     if (badge) badge.style.display = isSoldOut ? 'inline-block' : 'none';
                                     
-                                    //BIN碼
                                     const binText = wineDOM.querySelector('.bin-text');
                                     if (binText) binText.innerText = newWine.bin;
                                 }
 
-                                //同步更新手機彈窗
+                                // 當前彈窗無縫更新
                                 if (currentWine && currentWine.ref === newWine.ref) {
                                     document.getElementById("modalMetaInfo").innerText = `BIN: ${newWine.bin} | REF: ${newWine.ref} | ${newWine.size} | Stock: ${newWine.stock}`;
                                     document.getElementById("sommTip").style.display = newWine.stock <= 0 ? "block" : "none";
@@ -255,7 +258,7 @@
                         }
                     });
                 } else {
-                    //第一次載入
+                    // 💡 防呆機制：若為首次載入或後台增加了新酒款（長度不符），則完整重繪酒單
                     inventory = fetchedWines;
                     filterWines();
                 }
@@ -271,7 +274,6 @@
             });
         }
 
-        //渲染酒款清單
         function renderWines(data) {
             const listArea = document.getElementById('wineList');
             if(data.length === 0) { listArea.innerHTML = "<p style='text-align:center; color:#999; padding:40px;'>No wines found.</p>"; return; }
@@ -359,6 +361,7 @@
             if (e.target === this) closeModal();
         });
 
+        // 庫存更新
         async function saveAdminChange() {
             const newBin = document.getElementById("editBin").value.trim();
             const newStock = document.getElementById("editStock").value.trim();
@@ -370,14 +373,21 @@
             
             try {
                 await fetch(gasUrl, {
-                    method: "POST", mode: "no-cors",
+                    method: "POST", 
+                    mode: "no-cors", // GAS跨網域轉址CORS
                     body: JSON.stringify({ 
-                        oldBin: currentWine.bin, ref: currentWine.ref || "", name: currentWine.name, 
-                        year: currentWine.year, newBin: newBin, newStock: newStock, staff: staffName 
+                        oldBin: currentWine.bin, 
+                        ref: currentWine.ref || "", 
+                        name: currentWine.name, 
+                        year: currentWine.year, 
+                        newBin: newBin, 
+                        newStock: newStock, 
+                        staff: staffName,
+                        category: currentWine.category // GAS對應分頁
                     })
                 });
                 
-                //快取與視覺
+                // 本地快取
                 currentWine.bin = newBin;
                 currentWine.stock = parseInt(newStock);
                 
@@ -399,7 +409,7 @@
                 btn.style.background = "#af9462";
                 btn.style.color = "#fff";
                 setTimeout(resetBtnState, 2000);
-                loadData(true); 
+                loadData(true); // 後臺校對
             } catch (e) { 
                 btn.innerText = "ERROR"; 
                 btn.disabled = false; 
@@ -464,7 +474,7 @@
         function fillColor() { 
             let s1 = document.getElementById("slider-1"), s2 = document.getElementById("slider-2");
             let p1 = (s1.value / MAX_SLIDER_VAL) * 100, p2 = (s2.value / MAX_SLIDER_VAL) * 100; 
-            document.getElementById("sliderTrack").style.background = `linear-gradient(to right, #444 ${p1}%, var(--gold) ${p1}%, var(--gold) ${p2}%, #444 ${p2}%)`;
+            document.getElementById("sliderTrack").style.background = `linear-gradient(to right, #444 #1a1a1a ${p1}%, var(--gold) ${p1}%, var(--gold) ${p2}%, #444 ${p2}%)`;
         }
         function updateSliderOne() { document.getElementById("slider-1").value = document.getElementById("minPriceInput").value; fillColor(); filterWines(); }
         function updateSliderTwo() { document.getElementById("slider-2").value = document.getElementById("maxPriceInput").value; fillColor(); filterWines(); }
@@ -474,9 +484,10 @@
             fillColor(); filterWines();
         }
 
-        /* 初始化與即時庫存同步 */
+        /* 系統初始化啟動 */
         loadData();
-        //背景刷新
+        
+        /* 每5秒背景更新 */
         setInterval(() => loadData(true), 5000);
     </script>
 </body>
