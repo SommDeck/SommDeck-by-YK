@@ -16,9 +16,9 @@ import json
 import requests
 from io import StringIO
 
-SHEET_ID = "107NpWDkYD0lhIoC-ewLHZouWJoAfd8GTifBa8YTDMSQ"
+SHEET_ID = "107NpWDkYDOlhIoC-ewLHZouWJoAfd8GTifBa8YTDMSQ"
 
-#GAS同步對應A到P欄位的0-based索引
+# GAS同步對應A到P欄位的0-based索引
 COL = {
     "bin": 0,          # A 欄：庫位
     "ref": 1,          # B 欄：編號
@@ -38,12 +38,12 @@ COL = {
     "url": 15          # P 欄：圖片連結
 }
 
-#前端8大項目
+# 前端大項目
 MASTER_CATEGORIES = [
     "By The Glass",
     "Champagne & Sparkling",
     "White Wine",
-    "Red wine",
+    "Red Wine",
     "Sweet Wine",
     "Spirit & Liquor",
     "Draft & Cocktail",
@@ -57,39 +57,30 @@ def get_menu_category(tab_name):
     """
     name_lower = tab_name.lower().strip()
     
-    #單杯區
     if "glass" in name_lower or "btg" in name_lower or "單杯" in name_lower:
         return "By The Glass"
-    #香檳/氣泡酒
     elif "champagne" in name_lower or "sparkling" in name_lower or "氣泡" in name_lower or "香檳" in name_lower:
         return "Champagne & Sparkling"
-    #甜酒
     elif "sweet" in name_lower or "dessert" in name_lower or "甜酒" in name_lower or "貴腐" in name_lower:
         return "Sweet Wine"
-    # 烈酒
     elif "spirit" in name_lower or "liquor" in name_lower or "whisky" in name_lower or "烈酒" in name_lower:
         return "Spirit & Liquor"
-    #生啤/調酒
     elif "draft" in name_lower or "cocktail" in name_lower or "調酒" in name_lower or "汲飲" in name_lower:
         return "Draft & Cocktail"
-    #軟飲/無酒精
     elif "free" in name_lower or "soft" in name_lower or "無酒精" in name_lower or "軟性" in name_lower:
         return "Alcohol Free & Soft Drink"
-    #紅酒
     elif "red" in name_lower or "紅" in name_lower:
-        return "Red wine"
-    #白酒
+        return "Red Wine"
     elif "white" in name_lower or "白" in name_lower:
         return "White Wine"
     
-    # 防呆：若未字東歸類，預設歸入白葡萄酒
-    return "White Wine"
+    return "White Wine" # 防呆預設
 
 def fetch_and_clean():
-    #確保JSON順序符
+    # 確保JSON初始化
     output_database = {cat: {} for cat in MASTER_CATEGORIES}
 
-    #Gviz API獲取試算表分頁名稱
+    # Gviz API分頁名稱
     meta_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:json"
     try:
         res = requests.get(meta_url)
@@ -103,12 +94,11 @@ def fetch_and_clean():
 
     base_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-    #分頁歸類
+    # 分頁與歸類
     for tab_name in sheet_names:
         if "REC" in tab_name or "CRM" in tab_name:
             continue
             
-        #識別當前分頁
         target_category = get_menu_category(tab_name)
         print(f"[*] 偵測到分頁 [{tab_name}] ➔ 自動歸流至前端大項: {target_category}")
             
@@ -117,37 +107,36 @@ def fetch_and_clean():
             response = requests.get(url)
             response.encoding = 'utf-8'
             
+            # 讀取CSV
             df = pd.read_csv(StringIO(response.text), skiprows=2, header=None)
             
-            df = df[df[COL["item"]].notnull() & (df[COL["item"]].astype(str).str.strip() != "")]
-            df = df.fillna("") 
+            # 防止因GS欄未填導致的IndexError/KeyError
+            df = df.reindex(columns=range(16), fillvalue="")
+            
+            # 過濾無效列
+            df = df.fillna("")
+            df = df[df[COL["item"]].astype(str).str.strip() != ""]
             
             if df.empty:
                 continue
 
-            #逐列迭代
+            # 逐列迭代
             for _, row in df.iterrows():
-                row_list = list(row) + [""] * (16 - len(row))
+                row_list = list(row)
                 
+                # 地理防呆
                 country = str(row_list[COL["country"]]).strip() or "Others"
                 region = str(row_list[COL["region"]]).strip() or "Generic"
                 sub_region = str(row_list[COL["sub_region"]]).strip() or "Generic"
                 
-                if country not in output_database[target_category]:
-                    output_database[target_category][country] = {}
-                if region not in output_database[target_category][country]:
-                    output_database[target_category][country][region] = {}
-                if sub_region not in output_database[target_category][country][region]:
-                    output_database[target_category][country][region][sub_region] = []
-
-                #庫存與售罄
+                # 即時庫存
                 ending_str = str(row_list[COL["ending"]]).replace(",", "").strip()
                 try:
                     is_sold_out = True if not ending_str or float(ending_str) <= 0 else False
                 except ValueError:
                     is_sold_out = False 
 
-                #酒款規格
+                # 酒款規格
                 wine_obj = {
                     "bin": str(row_list[COL["bin"]]).strip(),
                     "ref": str(row_list[COL["ref"]]).strip(),
@@ -162,32 +151,37 @@ def fetch_and_clean():
                     "tag": str(row_list[COL["tag"]]).strip(),
                     "description": str(row_list[COL["description"]]).strip(),
                     "url": str(row_list[COL["url"]]).strip(),
-                    "original_tab": tab_name,  #保留原始分頁名
+                    "original_tab": tab_name,
                     "is_sold_out": is_sold_out
                 }
                 
-                #子產區陣列
-                output_database[target_category][country][region][sub_region].append(wine_obj)
+                # 使用setdefault鏈式語法
+                output_database[target_category] \
+                    .setdefault(country, {}) \
+                    .setdefault(region, {}) \
+                    .setdefault(sub_region, []) \
+                    .append(wine_obj)
                 
             print(f"[+] 成功同步並歸流分頁資料: {tab_name}")
             
         except Exception as e:
             print(f"[-] 同步分頁 {tab_name} 失敗: {e}")
 
-    #過濾沒有資料項目
+    # 過濾掉空項目
     final_database = {cat: data for cat, data in output_database.items() if data}
     active_categories = list(final_database.keys())
 
-    #前端JSON
+    # 封裝前端對接規格JSON
     final_json = {
-        "menu_types": active_categories,  # 這裡只會留下有酒款的大項（例如：["By The Glass", "White Wine", "Red wine"]）
+        "menu_types": active_categories,  
         "database": final_database
     }
 
-    #本地寫入
+    # 本地輸出
     with open('wine_data.json', 'w', encoding='utf-8') as f:
         json.dump(final_json, f, ensure_ascii=False, indent=4)
-    print("\n[完成] 智能 8 大項歸流完成！wine_data.json 已生成，無縫對接前端 Tabs 渲染！")
+        
+    print("\n[完成] wine_data.json 對接前端Tabs")
 
 if __name__ == "__main__":
     fetch_and_clean()
