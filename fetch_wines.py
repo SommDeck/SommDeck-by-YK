@@ -1,6 +1,6 @@
 # =================================================================================
 # 
-# 專案名稱：電子酒單&庫存前後端管理系統 (GSA 動態二級架構版)
+# 專案名稱：電子酒單&庫存前後端管理系統
 # 開發設計：Sommelier Yannick "Y.K." Liu
 # 版權所有 (c) 2026 Yannick "Y.K." Liu. 保留所有權利。
 #
@@ -18,7 +18,6 @@ def get_big_category(sheet_name):
     """
     【分類漏斗】
     根據試算表分頁名稱(Tabs)，動態運算出最外層側邊欄的摺疊大分類。
-    支援未來任意拆分或擴充子分頁。
     """
     name_lower = sheet_name.lower()
     
@@ -62,8 +61,8 @@ def fetch_and_clean():
 
     # 對各分頁進行二維矩陣對齊
     for name in sheet_names:
-        # 排除後臺分頁
-        if "REC" in name or "CRM" in name:
+        # 排除後臺與日誌分頁
+        if "REC" in name or "CRM" in name or "Setup" in name or "User_Config" in name:
             continue
             
         try:
@@ -71,22 +70,21 @@ def fetch_and_clean():
             response = requests.get(url)
             response.encoding = 'utf-8'
             
-            #  (skiprows=2)
+            # 從第三列開始讀取資料
             df = pd.read_csv(StringIO(response.text), skiprows=2, header=None)
             
-            # 將資料補滿至12欄 (索引 0~11，對應 A-L 欄)
-            # 防止Pandas自動裁切造成位移
-            for col_idx in range(12):
+            # 資料補至16欄
+            for col_idx in range(16):
                 if col_idx not in df.columns:
                     df[col_idx] = ""
             
-            # 保留基礎12欄資料捨棄雜訊欄
-            df = df.iloc[:, :12]
+            # 16欄資料，其餘捨棄
+            df = df.iloc[:, :16]
             
-            # 清除酒名(Index 4)為空或純空白鍵的無效無登錄橫列
-            df = df[df[4].notnull() & (df[4].astype(str).str.strip() != "")]
+            # Index 5為空的無效橫列
+            df = df[df[5].notnull() & (df[5].astype(str).str.strip() != "")]
             
-            # 防止年份、REF等字串失效
+            # 防止年份、REF等字串型態失效（移除 .0 的問題）
             def clean_cell(val):
                 if pd.isna(val):
                     return ""
@@ -101,8 +99,10 @@ def fetch_and_clean():
             
             # 雙層選單路由節點
             big_cat = get_big_category(name)
-            df[12] = name     # Index 12: 子分頁名稱 (例如: "Burgundy Red")
-            df[13] = big_cat  # Index 13: 側邊欄折疊大分類 (例如: "Red Wine")
+            
+            # 系統產生的分類標籤順延附加在P欄之後，不干擾真實資料
+            df[16] = name     # Index 16: 子分頁名稱
+            df[17] = big_cat  # Index 17: 側邊欄折疊大分類
             
             # 合併至全域資料集
             all_wines.extend(df.values.tolist())
