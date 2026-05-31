@@ -34,29 +34,27 @@ jobs:
       uses: actions/setup-python@v5.4.0
       with:
         python-version: '3.10'
-        cache: 'pip' # 開啟pip快取機制
 
     - name: 3. 安裝必要第三方套件
       run: |
         python -m pip install --upgrade pip
         pip install pandas requests
 
-    - name: 4. 執行資料抓取與清洗(GSA動態同步)
-      # 執行Python腳本
+    - name: 4. GSA動態同步
       run: python fetch_wines.py
 
-    - name: 5. 檢查變更並自動提交推送
+    - name: 5. 檢查變更
       run: |
-        # 設定GitHub Actions虛擬機器人身份
+        # GitHub Actions虛擬機器人
         git config --global user.name "YK-SommBot"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
         
-        # 將產出的前端JSON資料夾加入暫存區
+        # 前端JSON加入暫存
         git add wine_data.json
         
-        # 安全檢查：若資料與前一次無異動，則直接結束流程
+        # 安全檢查：若無異動，則直接結束流程
         if git diff --staged --quiet; then
-          echo "數據與遠端同步，無變更，跳過更新。"
+          echo "無變更，跳過更新。"
           exit 0
         fi
         
