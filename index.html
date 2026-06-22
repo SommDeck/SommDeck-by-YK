@@ -219,7 +219,7 @@
         let selectedVarieties = [];
         let selectedTags = [];
 
-        // 12 大類排序索引設定
+        // 索引排序
         const CATEGORY_ORDER = {
             "By the Glass": 1,
             "Sparkling": 2,
@@ -538,7 +538,7 @@
             const min = parseInt(document.getElementById('minPriceInput').value) || 0;
             const max = parseInt(document.getElementById('maxPriceInput').value) || 9999999;
             
-            // 🎯 這裡已修改：當處於主頁 (All) 時，只挑選符合這 8 個整瓶大類的品項
+            // 主頁只顯示整瓶品項
             const bottleCategories = ["Sparkling", "Rosé", "White Wine", "Red Wine", "Sweet Wine", "Fortified Wine", "Sake", "Spirits & Liquor"];
             const base = (activeCat === 'All') 
                 ? inventory.filter(w => bottleCategories.includes(w.bigCategory)) 
