@@ -17,11 +17,11 @@ SHEET_ID = "107NpWDkYD0lhIoC-ewLHZouWJoAfd8GTifBa8YTDMSQ"
 # 順序Index
 CATEGORY_ORDER = {
     "By the Glass": 1,
-    "Champagne & Sparkling": 2,
+    "Sparkling": 2,
     "Rosé": 3,
     "White Wine": 4,
     "Red Wine": 5,
-    "Dessert Wine": 6,
+    "Sweer Wine": 6,
     "Fortified Wine": 7,
     "Sake": 8,
     "Spirits & Liquor": 9,
@@ -48,9 +48,9 @@ def parse_categories(sheet_name):
             sub_cat = "Wine" # 安全預設值
         return big_cat, sub_cat
         
-    # 2. Champagne & Sparkling
+    # 2. Sparkling
     elif "champagne" in name_lower or "sparkling" in name_lower:
-        return "Sparkling Wine", sheet_name
+        return "Champagne & Sparkling", sheet_name
         
     # 3. Rosé
     elif "rosé" in name_lower or "rose" in name_lower:
@@ -85,7 +85,7 @@ def parse_categories(sheet_name):
         return "Draft & Cocktails", sheet_name
         
     # 11. Alcohol Free & Soft Drinks
-    elif "alcohol Free" in name_lower or "soft drink" in name_lower or "mocktail" in name_lower or "juice" in name_lower or "soda" in name_lower or "tea" in name_lower or "coffee" in name_lower:
+    elif "alcohol free" in name_lower or "soft drink" in name_lower or "mocktail" in name_lower or "juice" in name_lower or "soda" in name_lower or "tea" in name_lower or "coffee" in name_lower:
         return "Alcohol Free & Soft Drinks", sheet_name
         
     # 12. Others
@@ -164,10 +164,10 @@ def fetch_and_clean():
         except Exception as e:
             print(f"【警告】同步分頁 {name} 失敗。原因: {e}")
 
-    # CATEGORY_ORDER
+    # CATEGORY_ORDER 排序酒款
     all_wines.sort(key=lambda x: CATEGORY_ORDER.get(x[17], 99))
     
-    # categories排序
+    # categories 排序
     sorted_categories = list(set(raw_categories))
     sorted_categories.sort(key=lambda name: CATEGORY_ORDER.get(parse_categories(name)[0], 99))
 
@@ -177,7 +177,7 @@ def fetch_and_clean():
         "categories": sorted_categories
     }
 
-    # JSON
+    # 匯出 JSON
     with open('wine_data.json', 'w', encoding='utf-8') as f:
         json.dump(output_data, f, ensure_ascii=False, indent=4)
     print(f"\n[完成] 完美的 {len(all_wines)} 款酒水已按照指定酒單順序排序並匯出。")
