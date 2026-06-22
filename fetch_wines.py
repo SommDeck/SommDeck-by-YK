@@ -50,7 +50,7 @@ def parse_categories(sheet_name):
         
     # 2. Sparkling
     elif "champagne" in name_lower or "sparkling" in name_lower:
-        return "Champagne & Sparkling", sheet_name
+        return "Sparkling", sheet_name
         
     # 3. Rosé
     elif "rosé" in name_lower or "rose" in name_lower:
