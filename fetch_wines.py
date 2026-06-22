@@ -21,7 +21,7 @@ CATEGORY_ORDER = {
     "Rosé": 3,
     "White Wine": 4,
     "Red Wine": 5,
-    "Sweer Wine": 6,
+    "Sweet Wine": 6,
     "Fortified Wine": 7,
     "Sake": 8,
     "Spirits & Liquor": 9,
