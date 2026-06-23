@@ -99,7 +99,7 @@ def fetch_and_clean():
     all_wines = []      # 酒款總表
     raw_categories = []  # 分頁原始名稱
     
-    # 透過 GSA (Google Visualization API) 獲取試算表分頁
+    # 透過GSA獲取試算表
     meta_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:json"
     
     try:
@@ -109,14 +109,14 @@ def fetch_and_clean():
         meta_data = json.loads(res.text[start_idx:end_idx])
         sheet_names = [sheet['name'] for sheet in meta_data.get('table', {}).get('parsedParams', {}).get('sheets', [])]
     except Exception as e:
-        print(f"【錯誤】動態獲取分頁結構失敗: {e}")
+        print(f"[Error] Failed to dynamically fetch sheet structure: {e}")
         return
 
     base_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-    # 遍歷每個有效分頁
+    # 有效分頁
     for name in sheet_names:
-        # 排除後臺與日誌分頁
+        # 排除後臺與日誌
         if "REC" in name or "CRM" in name or "Setup" in name or "User_Config" in name:
             continue
             
@@ -128,7 +128,7 @@ def fetch_and_clean():
             # 讀取CSV並跳過前2列
             df = pd.read_csv(StringIO(response.text), skiprows=2, header=None)
             
-            # 【防呆】將資料補滿至16欄，防止前端調用時Undefined
+            # 補滿至16欄
             for col_idx in range(16):
                 if col_idx not in df.columns:
                     df[col_idx] = ""
@@ -151,7 +151,7 @@ def fetch_and_clean():
             for col in df.columns:
                 df[col] = df[col].apply(clean_cell)
             
-            # 大分類與子分類名稱貼標
+            # 大分類與子分類
             big_cat, sub_cat = parse_categories(name)
             
             df[16] = sub_cat  # Index 16: 前台子項目名稱
@@ -159,15 +159,15 @@ def fetch_and_clean():
             
             all_wines.extend(df.values.tolist())
             raw_categories.append(name)
-            print(f"成功同步分頁: [{big_cat: <26} -> {sub_cat: <18} (原分頁名: {name})]")
+            print(f"Successfully synced sheet: [{big_cat: <26} -> {sub_cat: <18} (Original sheet name: {name})]")
             
         except Exception as e:
-            print(f"【警告】同步分頁 {name} 失敗。原因: {e}")
+            print(f"[Warning] Failed to sync sheet {name}. Reason: {e}")
 
-    # CATEGORY_ORDER 排序酒款
+    # CATEGORY_ORDER排序酒款
     all_wines.sort(key=lambda x: CATEGORY_ORDER.get(x[17], 99))
     
-    # categories 排序
+    # categories排序
     sorted_categories = list(set(raw_categories))
     sorted_categories.sort(key=lambda name: CATEGORY_ORDER.get(parse_categories(name)[0], 99))
 
@@ -177,10 +177,10 @@ def fetch_and_clean():
         "categories": sorted_categories
     }
 
-    # 匯出 JSON
+    # 匯出JSON
     with open('wine_data.json', 'w', encoding='utf-8') as f:
         json.dump(output_data, f, ensure_ascii=False, indent=4)
-    print(f"\n[完成] 完美的 {len(all_wines)} 款酒水已按照指定酒單順序排序並匯出。")
+    print(f"\n[Complete] {len(all_wines)} items have been sorted by the specified menu order and exported.")
 
 if __name__ == "__main__":
     fetch_and_clean()
