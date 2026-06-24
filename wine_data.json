@@ -1,4 +1,7 @@
 {
     "wines": [],
-    "categories": []
+    "categories": [
+        "By the Glass",
+        "Wine List"
+    ]
 }
