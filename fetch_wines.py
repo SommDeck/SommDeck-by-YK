@@ -14,6 +14,9 @@ from io import StringIO
 # 試算表ID
 SHEET_ID = "107NpWDkYD0lhIoC-ewLHZouWJoAfd8GTifBa8YTDMSQ"
 
+# 只抓取指定的兩個分頁
+TARGET_SHEETS = ["By the Glass", "Wine List"]
+
 # 順序Index
 CATEGORY_ORDER = {
     "By the Glass": 1,
@@ -24,121 +27,112 @@ CATEGORY_ORDER = {
     "Sweet Wine": 6,
     "Fortified Wine": 7,
     "Sake": 8,
-    "Spirits & Liquor": 9,
-    "Draft & Cocktails": 10,
+    "Spirits & Liquors": 9,
+    "Beer & Cocktails": 10,
     "Alcohol Free & Soft Drinks": 11,
     "Others": 12
 }
 
-def parse_categories(sheet_name):
+def parse_categories(sheet_name, row):
     """
-    分類
-    依據分頁名稱關鍵字，進行分類
+    依據最新邏輯動態計算大分類與子分類
+    row[2] = C欄 (Type), row[3] = D欄 (Country), row[4] = E欄 (Region)
     """
-    name_lower = sheet_name.lower()
+    type_val = str(row[2] or "").strip()
+    country_val = str(row[3] or "").strip()
+    region_val = str(row[4] or "").strip()
     
     # 1. By the Glass
-    if "glass" in name_lower:
+    if sheet_name == "By the Glass":
         big_cat = "By the Glass"
-        if "wine" in name_lower:
-            sub_cat = "Wine"
-        elif "spirits" in name_lower or "liquor" in name_lower:
+        type_lower = type_val.lower()
+        if "spirit" in type_lower or "liquor" in type_lower or any(x in type_lower for x in ["whisky", "whiskey", "brandy", "cognac", "gin", "vodka", "rum", "tequila"]):
             sub_cat = "Spirits & Liquor"
+        elif "sake" in type_lower:
+            sub_cat = "Sake"
         else:
-            sub_cat = "Wine" # 安全預設值
+            sub_cat = "Wine"
         return big_cat, sub_cat
         
     # 2. Sparkling
-    elif "champagne" in name_lower or "sparkling" in name_lower:
-        return "Sparkling", sheet_name
+    if type_val == "Sparkling":
+        if region_val == "Champagne":
+            return "Sparkling", "Champagne"
+        return "Sparkling", country_val if country_val else "Others"
         
     # 3. Rosé
-    elif "rosé" in name_lower or "rose" in name_lower:
-        return "Rosé", sheet_name
+    elif type_val in ["Rosé", "Rose"]:
+        return "Rosé", country_val if country_val else "Others"
         
     # 4. White Wine
-    elif "white" in name_lower:
-        return "White Wine", sheet_name
+    elif type_val in ["White", "White Wine"]:
+        return "White Wine", country_val if country_val else "Others"
         
     # 5. Red Wine
-    elif "red" in name_lower:
-        return "Red Wine", sheet_name
+    elif type_val in ["Red", "Red Wine"]:
+        return "Red Wine", country_val if country_val else "Others"
         
     # 6. Sweet Wine
-    elif "sweet" in name_lower or "dessert" in name_lower or "sauternes" in name_lower or "tokaji" in name_lower or "ice wine" in name_lower:
-        return "Sweet Wine", sheet_name
+    elif type_val in ["Sweet", "Sweet Wine", "Dessert", "Sauternes", "Tokaji", "Ice Wine"]:
+        return "Sweet Wine", country_val if country_val else "Others"
         
     # 7. Fortified Wine
-    elif "fortified" in name_lower or "port" in name_lower or "sherry" in name_lower:
-        return "Fortified Wine", sheet_name
+    elif type_val in ["Sherry", "Port", "Madeira", "Fortified", "Fortified Wine"]:
+        return "Fortified Wine", country_val if country_val else "Others"
 
     # 8. Sake
-    elif "sake" in name_lower or "nihonshu" in name_lower:
-        return "Sake", sheet_name
+    elif type_val in ["Sake", "Nihonshu"]:
+        return "Sake", "Sake"
         
-    # 9. Spirits & Liquor
-    elif "spirits" in name_lower or "liquor" in name_lower:
-        return "Spirits & Liquor", sheet_name
+    # 9. Spirits & Liquors
+    spirits_types = ["Spirits", "Single Malt Whisky", "Blended Whisky", "Brandy", "Cognac", "Armagnac", "Calvado", "Rum", "Vodka", "Gin", "Tequila", "Liquor"]
+    if type_val in spirits_types:
+        return "Spirits & Liquors", type_val
         
-    # 10. Draft & Cocktails
-    elif "draft" in name_lower or "cocktail" in name_lower or "beer" in name_lower:
-        return "Draft & Cocktails", sheet_name
+    # 10. Beer & Cocktails
+    beer_cocktail_types = ["Beer", "Bottled Beer", "Draft Beer", "Cocktail", "Draft Cocktail"]
+    if type_val in beer_cocktail_types:
+        return "Beer & Cocktails", type_val
         
     # 11. Alcohol Free & Soft Drinks
-    elif "alcohol free" in name_lower or "soft drink" in name_lower or "mocktail" in name_lower or "juice" in name_lower or "soda" in name_lower or "tea" in name_lower or "coffee" in name_lower:
-        return "Alcohol Free & Soft Drinks", sheet_name
+    soft_types = ["Alcohol Free", "Alccohol Free", "Soft Drink", "Juice", "Tea", "Coffee", "Mocktail"]
+    if type_val in soft_types:
+        # 修正拼錯字
+        return "Alcohol Free & Soft Drinks", "Alcohol Free" if type_val == "Alccohol Free" else type_val
         
     # 12. Others
-    else:
-        return "Others", sheet_name
+    return "Others", type_val if type_val else "Others"
 
 def fetch_and_clean():
     """
-    核抓取、排序函式
+    核心抓取、清洗與排序函式
     """
     all_wines = []      # 酒款總表
-    raw_categories = []  # 分頁原始名稱
     
-    # 透過GSA獲取試算表
-    meta_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:json"
-    
-    try:
-        res = requests.get(meta_url)
-        start_idx = res.text.find("{")
-        end_idx = res.text.rfind("}") + 1
-        meta_data = json.loads(res.text[start_idx:end_idx])
-        sheet_names = [sheet['name'] for sheet in meta_data.get('table', {}).get('parsedParams', {}).get('sheets', [])]
-    except Exception as e:
-        print(f"[Error] Failed to dynamically fetch sheet structure: {e}")
-        return
-
     base_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-    # 有效分頁
-    for name in sheet_names:
-        # 排除後臺與日誌
-        if "REC" in name or "CRM" in name or "Setup" in name or "User_Config" in name:
-            continue
-            
+    # 僅針對指定的兩個有效分頁進行抓取
+    for name in TARGET_SHEETS:
         try:
             url = f"{base_url}&sheet={requests.utils.quote(name)}"
             response = requests.get(url)
             response.encoding = 'utf-8'
             
-            # 讀取CSV並跳過前2列
+            # 讀取 CSV 並跳過前 2 列（Row 1 & Row 2 為抬頭與說明欄）
             df = pd.read_csv(StringIO(response.text), skiprows=2, header=None)
             
-            # 補滿至16欄
-            for col_idx in range(16):
+            # 對接 21 欄結構：若不足 21 欄（A~U）則補滿空字串
+            for col_idx in range(21):
                 if col_idx not in df.columns:
                     df[col_idx] = ""
             
-            df = df.iloc[:, :16]
+            # 只取前 21 欄
+            df = df.iloc[:, :21]
             
-            # 清除Index 5為空的無效列
-            df = df[df[5].notnull() & (df[5].astype(str).str.strip() != "")]
+            # 清除 Index 1 (Column B - REF代碼) 為空的無效列
+            df = df[df[1].notnull() & (df[1].astype(str).str.strip() != "")]
             
-            # 清除儲存格前後空格
+            # 清除儲存格前後空格與格化式調整
             def clean_cell(val):
                 if pd.isna(val):
                     return ""
@@ -151,36 +145,43 @@ def fetch_and_clean():
             for col in df.columns:
                 df[col] = df[col].apply(clean_cell)
             
-            # 大分類與子分類
-            big_cat, sub_cat = parse_categories(name)
+            # 開始將 DataFrame 轉為二維陣列進行精密分類加工
+            rows = df.values.tolist()
+            processed_rows = []
             
-            df[16] = sub_cat  # Index 16: 前台子項目名稱
-            df[17] = big_cat  # Index 17: 側邊欄/大分類名稱
-            
-            all_wines.extend(df.values.tolist())
-            raw_categories.append(name)
-            print(f"Successfully synced sheet: [{big_cat: <26} -> {sub_cat: <18} (Original sheet name: {name})]")
+            for row in rows:
+                # 依據最新複雜邏輯計算大分類與子分類
+                big_cat, sub_cat = parse_categories(name, row)
+                
+                # 替換 row[2] 為動態計算出的子分類，方便前端框架直接沿用
+                row[2] = sub_cat
+                
+                # 將「大分類名稱」附加到陣列的最後面（Index 21）
+                row.append(big_cat)
+                
+                processed_rows.append(row)
+                
+            all_wines.extend(processed_rows)
+            print(f"Successfully synced sheet: [{name}] -> Processed {len(processed_rows)} items.")
             
         except Exception as e:
             print(f"[Warning] Failed to sync sheet {name}. Reason: {e}")
 
-    # CATEGORY_ORDER排序酒款
-    all_wines.sort(key=lambda x: CATEGORY_ORDER.get(x[17], 99))
-    
-    # categories排序
-    sorted_categories = list(set(raw_categories))
-    sorted_categories.sort(key=lambda name: CATEGORY_ORDER.get(parse_categories(name)[0], 99))
+    # 依照 CATEGORY_ORDER 字典定義的權重順序進行全酒款精準排序
+    # x[21] 代表剛附加進去的最尾端「大分類」
+    all_wines.sort(key=lambda x: CATEGORY_ORDER.get(x[21], 99))
 
-    # 封裝
+    # 封裝輸出數據
     output_data = {
         "wines": all_wines,
-        "categories": sorted_categories
+        "categories": TARGET_SHEETS
     }
 
-    # 匯出JSON
+    # 匯出前端可讀取的 JSON 檔案
     with open('wine_data.json', 'w', encoding='utf-8') as f:
         json.dump(output_data, f, ensure_ascii=False, indent=4)
-    print(f"\n[Complete] {len(all_wines)} items have been sorted by the specified menu order and exported.")
+        
+    print(f"\n[Complete] {len(all_wines)} items have been parsed, sorted and successfully exported to 'wine_data.json'.")
 
 if __name__ == "__main__":
     fetch_and_clean()
