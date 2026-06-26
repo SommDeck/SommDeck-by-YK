@@ -43,7 +43,7 @@ COUNTRY_TO_ADJECTIVE = {
     "chile": "Chilean",
     "new zealand": "New Zealand",
     "south africa": "South African",
-    "America": "American",
+    "america": "American",
     "united states": "American",
     "usa": "American",
     "japan": "Japanese"
