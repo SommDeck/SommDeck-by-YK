@@ -33,19 +33,39 @@ CATEGORY_ORDER = {
     "Others": 12
 }
 
-def parse_categories(sheet_name, row):
+# 定義國家形容詞對照表
+COUNTRY_TO_ADJECTIVE = {
+    "france": "French",
+    "italy": "Italian",
+    "spain": "Spanish",
+    "australia": "Australian",
+    "germany": "German",
+    "chile": "Chilean",
+    "new zealand": "New Zealand",
+    "south africa": "South African",
+    "united states": "American",
+    "usa": "American",
+    "japan": "Japanese"
+}
+
+def classify_wine_dynamic(row, sheet_name="Wine List"):
     """
-    依據最新邏輯動態計算大分類與子分類
-    row[2] = C欄 (Type), row[3] = D欄 (Country), row[4] = E欄 (Region)
+    動態判定大分類與子分類 (修正：Champagne 直接由 C 欄 Type 判定)
+    row.iloc[2] = C欄 (Type)
+    row.iloc[3] = D欄 (Country)
     """
-    type_val = str(row[2] or "").strip()
-    country_val = str(row[3] or "").strip()
-    region_val = str(row[4] or "").strip()
+    type_val = str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) else ""
+    country_val = str(row.iloc[3]).strip() if pd.notna(row.iloc[3]) else ""
     
-    # 1. By the Glass
+    type_lower = type_val.lower()
+    country_lower = country_val.lower()
+    
+    # 獲取國家形容詞
+    country_adj = COUNTRY_TO_ADJECTIVE.get(country_lower, country_val.capitalize() if country_val else "Others")
+
+    # 1. By the Glass 分頁獨立判定
     if sheet_name == "By the Glass":
         big_cat = "By the Glass"
-        type_lower = type_val.lower()
         if "spirit" in type_lower or "liquor" in type_lower or any(x in type_lower for x in ["whisky", "whiskey", "brandy", "cognac", "gin", "vodka", "rum", "tequila"]):
             sub_cat = "Spirits & Liquor"
         elif "sake" in type_lower:
@@ -53,55 +73,58 @@ def parse_categories(sheet_name, row):
         else:
             sub_cat = "Wine"
         return big_cat, sub_cat
-        
-    # 2. Sparkling
-    if type_val == "Sparkling", "Champagne":
-        return "Sparkling", "Champagne"
-        return "Sparkling", country_val if country_val else "Others"
-        
-    # 3. Rosé
-    elif type_val in ["Rosé", "Rose"]:
-        return "Rosé", country_val if country_val else "Others"
-        
-    # 4. White Wine
-    elif type_val in ["White", "White Wine"]:
-        return "White Wine", country_val if country_val else "Others"
-        
-    # 5. Red Wine
-    elif type_val in ["Red", "Red Wine"]:
-        return "Red Wine", country_val if country_val else "Others"
-        
-    # 6. Sweet Wine
-    elif type_val in ["Sweet", "Sweet Wine", "Dessert", "Sauternes", "Tokaji", "Ice Wine"]:
-        return "Sweet Wine", country_val if country_val else "Others"
-        
-    # 7. Fortified Wine
-    elif type_val in ["Sherry", "Port", "Madeira", "Fortified", "Fortified Wine"]:
-        return "Fortified Wine", country_val if country_val else "Others"
 
-    # 8. Sake
+    # 2. Champagne 獨立邏輯 (直接檢查 C 欄 Type)
+    if type_lower in ["champagne", "champagen"]:
+        return "Sparkling", "Champagne"
+
+    # 3. Sparkling (其他氣泡酒)
+    elif type_val == "Sparkling":
+        return "Sparkling", f"{country_adj} Sparkling"
+
+    # 4. Rosé
+    elif type_val in ["Rosé", "Rose"]:
+        return "Rosé", f"{country_adj} Rosé"
+
+    # 5. White Wine
+    elif type_val in ["White", "White Wine"]:
+        return "White Wine", f"{country_adj} White"
+
+    # 6. Red Wine
+    elif type_val in ["Red", "Red Wine"]:
+        return "Red Wine", f"{country_adj} Red"
+
+    # 7. Sweet Wine
+    elif type_val in ["Sweet", "Sweet Wine", "Dessert", "Sauternes", "Tokaji", "Ice Wine"]:
+        return "Sweet Wine", f"{country_adj} Sweet"
+
+    # 8. Fortified Wine
+    elif type_val in ["Sherry", "Port", "Madeira", "Fortified", "Fortified Wine"]:
+        return "Fortified Wine", f"{country_adj} Fortified"
+
+    # 9. Sake
     elif type_val in ["Sake", "Nihonshu"]:
         return "Sake", "Sake"
-        
-    # 9. Spirits & Liquors
+
+    # 10. Spirits & Liquors
     spirits_types = ["Spirits", "Single Malt Whisky", "Blended Whisky", "Brandy", "Cognac", "Armagnac", "Calvado", "Rum", "Vodka", "Gin", "Tequila", "Liquor"]
     if type_val in spirits_types:
         return "Spirits & Liquors", type_val
-        
-    # 10. Beer & Cocktails
+
+    # 11. Beer & Cocktails
     beer_cocktail_types = ["Beer", "Bottled Beer", "Draft Beer", "Cocktail", "Draft Cocktail"]
     if type_val in beer_cocktail_types:
         return "Beer & Cocktails", type_val
-        
-    # 11. Alcohol Free & Soft Drinks
+
+    # 12. Alcohol Free & Soft Drinks
     soft_types = ["Alcohol Free", "Alccohol Free", "Soft Drink", "Juice", "Tea", "Coffee", "Mocktail"]
     if type_val in soft_types:
-        # 修正拼錯字
-        return "Alcohol Free & Soft Drinks", "Alcohol Free" if type_val == "Alccohol Free" else type_val
-        
-    # 12. Others
-    return "Others", type_val if type_val else "Others"
+        clean_type = "Alcohol Free" if type_val == "Alccohol Free" else type_val
+        return "Alcohol Free & Soft Drinks", clean_type
 
+    # 13. Others
+    return "Others", type_val if type_val else "Others"
+    
 def fetch_and_clean():
     """
     核心抓取、清洗與排序函式
