@@ -151,8 +151,8 @@ def fetch_and_clean():
             # 只取前 21 欄
             df = df.iloc[:, :21]
             
-            # 清除 Index 1 (Column B - REF代碼) 為空的無效列
-            df = df[df[1].notnull() & (df[1].astype(str).str.strip() != "")]
+            # 清除 Index 6 (Column G - Item Name) 為空的無效列
+            df = df[df[6].notnull() & (df[6].astype(str).str.strip() != "")]
             
             # 清除儲存格前後空格與格化式調整
             def clean_cell(val):
