@@ -55,9 +55,8 @@ def parse_categories(sheet_name, row):
         return big_cat, sub_cat
         
     # 2. Sparkling
-    if type_val == "Sparkling":
-        if region_val == "Champagne":
-            return "Sparkling", "Champagne"
+    if type_val == "Sparkling", "Champagne":
+        return "Sparkling", "Champagne"
         return "Sparkling", country_val if country_val else "Others"
         
     # 3. Rosé
