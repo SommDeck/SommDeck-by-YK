@@ -229,24 +229,18 @@
 
     <div id="wineModal" class="modal">
         <div class="modal-content" id="modalScrollTarget">
-            
             <div id="adminEditor" class="admin-editor-zone" style="display:none;">
                 <div id="adminBadge" style="color:var(--gold); font-size:0.75rem; font-weight:700; margin-bottom:20px; letter-spacing:2px; text-align:center; border-bottom:1px solid #eee; padding-bottom:10px;">CELLAR MANAGEMENT</div>
-                
                 <label class="admin-label">Cellar Location (BIN)</label>
                 <input type="text" id="editBin" class="admin-input" placeholder="e.g. A-101">
-                
                 <label class="admin-label">Stock Quantity</label>
                 <input type="number" id="editStock" class="admin-input" placeholder="0">
-                
                 <button id="saveBtn" class="save-btn" onclick="saveAdminChange()">Update Database</button>
             </div>
-
             <div id="sommTip" class="somm-interaction-tip">
                 <strong>Current Vintage Sold Out.</strong><br>
                 Please consult our Sommelier for alternative recommendations.
             </div>
-
             <img id="modalImage" style="width:100%; max-height:400px; object-fit:contain; display:none; margin-bottom:20px;">
             <div id="modalOrigin" style="font-family:var(--font-data); font-size:0.75rem; color:var(--gold); margin-bottom:8px;"></div>
             <div id="modalWineName" style="font-size:1.6rem; font-weight:700; margin-bottom:5px;"></div>
@@ -279,15 +273,8 @@
         let selectedVarieties = [];
         let selectedTags = [];
 
-        // 大分類排序權重表
-        const CATEGORY_ORDER = {
-            "By the Glass": 1, "Sparkling": 2, "Rosé": 3, "White Wine": 4, "Red Wine": 5,
-            "Sweet Wine": 6, "Fortified Wine": 7, "Sake": 8, "Spirits & Liquors": 9,
-            "Beer & Cocktails": 10, "Alcohol Free & Soft Drinks": 11, "Others": 12
-        };
         const normalizeText = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-        // 翻譯模組
         async function translateText(text, targetLang = 'en') {
             if (!text) return "";
             try {
@@ -295,10 +282,7 @@
                 const res = await fetch(url);
                 const json = await res.json();
                 return json[0].map(item => item[0]).join('');
-            } catch (e) {
-                console.error("Translation Error:", e);
-                return text; 
-            }
+            } catch (e) { return text; }
         }
 
         function setLanguage(lang) {
@@ -307,87 +291,72 @@
             if (lang === 'ZH') document.getElementById("btn-zh").classList.add("active-lang");
             if (lang === 'EN') document.getElementById("btn-en").classList.add("active-lang");
             if (lang === 'JP') document.getElementById("btn-jp").classList.add("active-lang");
-            
             filterWines();
             if (document.getElementById("wineModal").style.display === "block" && currentWine) {
                 openWineModalByRef(currentWine.ref, currentWine.name);
             }
         }
 
-        // =================================================================================
-        // 核心資料對接與清洗 (Column R & Column S)
-        // =================================================================================
         async function loadData(isSilent = false) {
             if(!isSilent) document.getElementById('loader').style.display = 'flex';
             try {
                 const response = await fetch(`${gasUrl}?t=${Date.now()}`);
                 const data = await response.json();
                 
-                const fetchedWines = data.wines.map(r => {
-                    const computedCategory = r[21] || "Others"; // 讀取後端判定好附加在 Index 21 的大分類
-                    
+                inventory = data.wines.map(r => {
                     return {
-                        bin: String(r[0] || ""),             // Column A — bin
-                        ref: String(r[1] || ""),             // Column B — ref
-                        type: String(r[2] || ""),            // Column C — type (精準子分類)
-                        country: String(r[3] || ""),         // Column D — country
-                        region: String(r[4] || ""),          // Column E — region
-                        sub_region: String(r[5] || ""),      // Column F — sub_region
-                        name: String(r[6] || ""),            // Column G — name
-                        year: String(r[7] || ""),            // Column H — year
-                        size: String(r[8] || ""),            // Column I — size
-                        price: parseInt(r[10] || 0, 10),     // Column K — price
-                        stock: parseInt(r[15] || 0, 10),     // Column P — endingStock
-                        // 切割 R 欄品種與 S 欄自訂標籤 (兼容逗號與斜線分割)
-                        varieties: r[17] ? String(r[17]).split(/[,/]/).map(v => v.trim()).filter(v => v !== "") : [], // Column R
-                        tags: r[18] ? String(r[18]).split(/[,/]/).map(t => t.trim()).filter(t => t !== "") : [],           // Column S
-                        desc: String(r[19] || ""),           // Column T — Description
-                        photo: String(r[20] || ""),          // Column U — Photo URL
-                        
-                        category: String(r[2] || ""),        // 子分類直接採用計算後的結果
-                        bigCategory: computedCategory        // 讀取大分類
+                        bin: String(r[0] || ""),
+                        ref: String(r[1] || ""),
+                        type: String(r[2] || ""),
+                        country: String(r[3] || ""),
+                        region: String(r[4] || ""),
+                        sub_region: String(r[5] || ""),
+                        name: String(r[6] || ""),
+                        year: String(r[7] || ""),
+                        size: String(r[8] || ""),
+                        price: parseInt(r[10] || 0, 10),
+                        stock: parseInt(r[15] || 0, 10),
+                        varieties: r[17] ? String(r[17]).split(/[,/]/).map(v => v.trim()).filter(v => v !== "") : [],
+                        tags: r[18] ? String(r[18]).split(/[,/]/).map(t => t.trim()).filter(t => t !== "") : [],
+                        desc: String(r[19] || ""),
+                        photo: String(r[20] || ""),
+                        category: String(r[2] || ""),
+                        bigCategory: String(r[21] || "Others")
                     };
                 });
 
                 if (!isSilent) {
-                    inventory = fetchedWines;
-                    renderNav(fetchedWines);
+                    renderNav(inventory);
                     renderFilters(); 
-                    filterWines();
-                } else {
-                    inventory = fetchedWines;
-                    filterWines();
                 }
-            } catch (e) {
-                console.error("Sync Error:", e);
-            } finally {
-                if (!isSilent) {
-                    setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 300);
-                }
+                filterWines();
+            } catch (e) { console.error(e); } finally {
+                if (!isSilent) setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 300);
             }
         }
 
-        // =================================================================================
-        // 左側選單大分類與子分類渲染
-        // =================================================================================
+        // 移除所有固定的排序權重，完全依靠後端原始輸出順序生成選單
         function renderNav(wines) {
             const nav = document.getElementById('dynamicNav');
             nav.innerHTML = `<a class="all-cat-btn" onclick="renderCategory('All')">All Categories</a><hr style="border:0; border-top:1px solid #333; margin: 0 30px 10px 30px;">`;
             
-            const structure = new Map();
+            const bigCatList = [];
+            const subCatMap = new Map();
+
             wines.forEach(w => {
                 if (!w.category) return;
-                if (!structure.has(w.bigCategory)) {
-                    structure.set(w.bigCategory, new Set());
+                if (!subCatMap.has(w.bigCategory)) {
+                    subCatMap.set(w.bigCategory, []);
+                    bigCatList.push(w.bigCategory); 
                 }
-                structure.get(w.bigCategory).add(w.category);
+                if (!subCatMap.get(w.bigCategory).includes(w.category)) {
+                    subCatMap.get(w.bigCategory).push(w.category);
+                }
             });
             
-            const sortedBigCats = Array.from(structure.keys()).sort((a, b) => (CATEGORY_ORDER[a] || 99) - (CATEGORY_ORDER[b] || 99));
-            
-            sortedBigCats.forEach(bigCat => {
-                const subTabs = structure.get(bigCat);
-                if (!subTabs || subTabs.size === 0) return;
+            bigCatList.forEach(bigCat => {
+                const subs = subCatMap.get(bigCat);
+                if (!subs || subs.length === 0) return;
                 
                 const block = document.createElement('div');
                 block.className = 'big-cat-block';
@@ -414,13 +383,12 @@
                     }
                 };
                 
-                Array.from(subTabs).sort().forEach(subCat => {
+                subs.forEach(subCat => {
                     const a = document.createElement('a');
                     a.className = 'sub-tab-link';
                     a.dataset.category = subCat;
                     if (activeCat === subCat) a.classList.add('active-sub');
                     
-                    // 清除贅字美化名稱 (完整保留國家與酒種名稱原貌)
                     let displayName = subCat.replace(/\b(red wine|white wine|wine|red|white|sweet|fortified|rosé|rose|sparkling)\b/ig, '').replace(/\s+/g, ' ').trim();
                     a.innerText = displayName || subCat;
                     
@@ -444,29 +412,25 @@
             filterWines();
         }
 
-        // =================================================================================
-        // Varieties 與 Tags 側邊欄複選清單動態抽樣生成
-        // =================================================================================
         function renderFilters() {
-            const varietySet = new Set(), tagSet = new Set();
-            
+            const varietyList = [], tagList = [];
             inventory.forEach(w => {
-                if (w.varieties) w.varieties.forEach(v => { if(v) varietySet.add(v); });
-                if (w.tags) w.tags.forEach(t => { if(t) tagSet.add(t); });
+                if (w.varieties) w.varieties.forEach(v => { if(v && !varietyList.includes(v)) varietyList.push(v); });
+                if (w.tags) w.tags.forEach(t => { if(t && !tagList.includes(t)) tagList.push(t); });
             });
             
             const vSection = document.getElementById('varietySection'), vContainer = document.getElementById('varietyContainer'); 
-            if (varietySet.size > 0) { 
+            if (varietyList.length > 0) { 
                 vSection.style.display = 'block';
-                vContainer.innerHTML = Array.from(varietySet).sort().map(v => 
+                vContainer.innerHTML = varietyList.map(v => 
                     `<label class="filter-checkbox-label"><input type="checkbox" value="${v}" class="variety-chk" ${selectedVarieties.includes(v) ? 'checked' : ''} onchange="handleVarietyChange()"><span>${v}</span></label>`
                 ).join('');
             } else { vSection.style.display = 'none'; } 
 
             const tSection = document.getElementById('tagSection'), tContainer = document.getElementById('tagContainer');
-            if (tagSet.size > 0) { 
+            if (tagList.length > 0) { 
                 tSection.style.display = 'block'; 
-                tContainer.innerHTML = Array.from(tagSet).sort().map(t => 
+                tContainer.innerHTML = tagList.map(t => 
                     `<label class="filter-checkbox-label"><input type="checkbox" value="${t}" class="tag-chk" ${selectedTags.includes(t) ? 'checked' : ''} onchange="handleTagChange()"><span>${t}</span></label>`
                 ).join('');
             } else { tSection.style.display = 'none'; } 
@@ -482,62 +446,37 @@
             filterWines();
         }
 
-        // =================================================================================
-        // 核心交叉多功能過濾引擎 (維持最嚴密、最準確交叉比對邏輯)
-        // =================================================================================
         function filterWines() {
             const query = normalizeText(document.getElementById('wineSearch').value);
             const minPrice = parseInt(document.getElementById('minPriceInput').value, 10) || 0;
             const maxPrice = parseInt(document.getElementById('maxPriceInput').value, 10) || MAX_SLIDER_VAL;
             
             const filtered = inventory.filter(w => {
-                // 1. 分類過濾
                 if (activeCat !== 'All' && w.category !== activeCat) return false;
-                
-                // 2. 關鍵字過濾
                 if (query) {
                     const matchText = normalizeText(`${w.bin} ${w.ref} ${w.name} ${w.country} ${w.region} ${w.sub_region} ${w.type} ${w.year}`);
                     if (!matchText.includes(query)) return false;
                 }
-                
-                // 3. 價格過濾
                 if (w.price < minPrice || w.price > maxPrice) return false;
-                
-                // 4. R 欄 Varieties 複選過濾 (交集：必須同時包含所有勾選品種)
                 if (selectedVarieties.length > 0) {
-                    const hasAllVarieties = selectedVarieties.every(v => w.varieties.includes(v));
-                    if (!hasAllVarieties) return false;
+                    if (!selectedVarieties.every(v => w.varieties.includes(v))) return false;
                 }
-                
-                // 5. S 欄 Tags 複選過濾 (交集：必須同時包含所有勾選標籤)
                 if (selectedTags.length > 0) {
-                    const hasAllTags = selectedTags.every(t => w.tags.includes(t));
-                    if (!hasAllTags) return false;
+                    if (!selectedTags.every(t => w.tags.includes(t))) return false;
                 }
-                
                 return true;
             });
             
             renderList(filtered);
         }
 
-        // =================================================================================
-        // 酒款列表渲染 (維持原有紙張條目外觀與 DOM)
-        // =================================================================================
+        // 移除任何人工干預的價格或狀態排序，百分之百維持原始資料列順序
         function renderList(wines) {
             const list = document.getElementById('wineList');
             if (wines.length === 0) {
                 list.innerHTML = `<div style="text-align:center; padding:40px; color:#999; font-style:italic;">No extraordinary bottles found matching your criteria.</div>`;
                 return;
             }
-            
-            // 排序規則：未售罄項目依價格由低到高，售罄（Stock <= 0）挪到最底部
-            wines.sort((a, b) => {
-                const aSoldOut = a.stock <= 0 ? 1 : 0;
-                const bSoldOut = b.stock <= 0 ? 1 : 0;
-                if (aSoldOut !== bSoldOut) return aSoldOut - bSoldOut;
-                return a.price - b.price;
-            });
             
             list.innerHTML = wines.map(w => {
                 const isSoldOut = w.stock <= 0;
@@ -569,9 +508,6 @@
             }).join('');
         }
 
-        // =================================================================================
-        // 詳細資訊彈出視窗
-        // =================================================================================
         async function openWineModalByRef(ref, fallbackName) {
             const w = inventory.find(item => item.ref === ref);
             if (!w) return;
@@ -626,9 +562,6 @@
             currentWine = null;
         }
 
-        // =================================================================================
-        // 管理者模式與後端同步 (雲端連線)
-        // =================================================================================
         function promptAdmin() {
             const code = prompt("Enter Sommelier Access Code:");
             if (code && authConfig[code]) {
@@ -662,16 +595,11 @@
                     loadData(true);
                     closeModal();
                 } else { alert("Update failed: " + result.message); }
-            } catch (e) {
-                console.error(e); alert("Network sync failed.");
-            } finally {
+            } catch (e) { alert("Network sync failed."); } finally {
                 btn.disabled = false; btn.innerText = "Update Database";
             }
         }
 
-        // =================================================================================
-        // 原生 UI 互動元件控制 (滑桿與側邊欄折疊開關)
-        // =================================================================================
         function toggleNav() {
             const s = document.getElementById("mySidenav"), b = document.getElementById("mainMenuBtn");
             const icon = document.getElementById("menuIcon"), text = document.getElementById("btnText");
@@ -682,8 +610,7 @@
         function toggleAccordion(el) {
             if (window.innerWidth > 600) return; 
             el.classList.toggle('active');
-            const container = el.nextElementSibling;
-            container.classList.toggle('active');
+            el.nextElementSibling.classList.toggle('active');
         }
 
         function slideOne() {
@@ -733,7 +660,6 @@
             setTrack(); filterWines();
         }
 
-        // 初始化
         window.onload = () => { setTrack(); loadData(); setInterval(() => loadData(true), 30000); };
     </script>
 </body>
