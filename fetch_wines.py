@@ -20,7 +20,7 @@ TARGET_SHEETS = ["By the Glass", "Wine List"]
 # Index
 CATEGORY_ORDER = {
     "By the Glass": 1,
-    "Sparkling": 2,
+    "Sparkling Wine": 2,
     "Rosé": 3,
     "White Wine": 4,
     "Red Wine": 5,
