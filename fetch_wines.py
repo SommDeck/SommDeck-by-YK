@@ -133,9 +133,9 @@ def classify_wine_dynamic(row, sheet_name="Wine List"):
     
 def fetch_and_clean():
     """
-    排序
+    排序與清理
     """
-    all_wines = []      # 酒款總表
+    all_wines = []      # 大酒單
     base_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
     # 指定分頁
@@ -148,15 +148,15 @@ def fetch_and_clean():
             # 跳過前2列
             df = pd.read_csv(StringIO(response.text), skiprows=2, header=None)
             
-            # 21欄結構
-            for col_idx in range(21):
+            # 22欄(Column A到V)
+            for col_idx in range(22):
                 if col_idx not in df.columns:
                     df[col_idx] = ""
             
-            # 只取前21欄
-            df = df.iloc[:, :21]
+            # (Index 0 到 21)
+            df = df.iloc[:, :22]
             
-            # Index 6(Column G)為空
+            # Index 6(Column G)為空則過濾掉
             df = df[df[6].notnull() & (df[6].astype(str).str.strip() != "")]
             
             # 格式化調整
@@ -172,17 +172,24 @@ def fetch_and_clean():
             for col in df.columns:
                 df[col] = df[col].apply(clean_cell)
             
-            # DataFrame
+            # DataFrame轉成List
             rows = df.values.tolist()
             processed_rows = []
             
             for row in rows:
                 big_cat, sub_cat = classify_wine_dynamic(row, name)
                 
-                # row[2] (Column C)
+                # row[2](Column C)填入子分類
                 row[2] = sub_cat
                 
-                # （Index 21）
+                # Index 21快取JSON
+                if len(row) > 21 and str(row[21]).startswith("{"):
+                    try:
+                        row[21] = json.loads(row[21])
+                    except Exception:
+                        row[21] = "" # 失敗維持空字串
+                
+                # Index 22
                 row.append(big_cat)
                 processed_rows.append(row)
                 
@@ -192,9 +199,8 @@ def fetch_and_clean():
         except Exception as e:
             print(f"[Warning] Failed to sync sheet {name}. Reason: {e}")
 
-    # CATEGORY_ORDER
-    # x[21]「大分類」
-    all_wines.sort(key=lambda x: CATEGORY_ORDER.get(x[21], 99))
+    # 排序依據
+    all_wines.sort(key=lambda x: CATEGORY_ORDER.get(x[22], 99))
 
     # 封裝
     output_data = {
