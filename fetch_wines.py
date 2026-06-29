@@ -12,7 +12,7 @@ import requests
 from io import StringIO
 
 # 試算表ID
-SHEET_ID = "107NpWDkYD0lhIoC-ewLHZouWJoAfd8GTifBa8YTDMSQ"
+SHEET_ID = "1Yq8_ZA73THLrd1qSyAL9BwXnEwzpefXHPqxRKf_60Rs"
 
 # 指定分頁
 TARGET_SHEETS = ["By the Glass", "Wine List"]
