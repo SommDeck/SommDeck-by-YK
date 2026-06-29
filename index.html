@@ -55,7 +55,7 @@
         .open-btn.active-menu { background-color: var(--gold); color: #000; left: 210px; }
 
         .sidenav { height: 100%; width: 0; position: fixed; z-index: 1300; top: 0; left: 0; background-color: var(--steakhouse-black); overflow-x: hidden; transition: 0.5s; display: flex; flex-direction: column; border-right: 1px solid var(--gold); }
-        .nav-links { flex: 1; padding-top: 80px; overflow-y: auto; }
+        .nav-links { flex: 1; padding-top: 0; overflow-y: auto; }
         
         .nav-links .all-cat-btn { padding: 18px 32px; text-decoration: none; font-size: 1rem; color: var(--gold); display: block; cursor: pointer; transition: 0.2s; font-weight: bold; }
         .nav-links .all-cat-btn:hover { background: #222; }
@@ -120,6 +120,13 @@
         .save-btn:hover { background: var(--gold); color: white; }
         .somm-interaction-tip { background: #fff; border: 1px solid #eee; color: #888; padding: 15px; font-size: 0.85rem; margin-bottom: 20px; font-style: italic; display: none; text-align: center; }
 
+        /* ── 語言選擇 ── */
+        .lang-selector-bar { padding: 75px 32px 18px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .lang-label { color: #555; font-size: 0.7rem; font-family: var(--font-data); letter-spacing: 1.5px; text-transform: uppercase; }
+        .global-lang-btn { background: none; border: 1px solid #333; color: #555; padding: 5px 12px; cursor: pointer; font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 1px; transition: border-color 0.2s, color 0.2s; }
+        .global-lang-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .global-lang-btn.active-lang { border-color: var(--gold); color: var(--gold); background: rgba(175,148,98,0.1); font-weight: 600; }
+
         .signature-footer { text-align: center; margin-top: 60px; font-size: 0.7rem; color: #999; border-top: 1px solid #ddd; padding-top: 30px; font-family: var(--font-data); }
 
         /* 手機版樣式 */
@@ -157,6 +164,15 @@
     </span>
 
     <div id="mySidenav" class="sidenav">
+        <!-- 語言切換 -->
+        <div class="lang-selector-bar">
+            <span class="lang-label">Language</span>
+            <div style="display:flex; gap:6px;">
+                <button onclick="setGlobalLang('zh')" id="global-zh" class="global-lang-btn">ZH</button>
+                <button onclick="setGlobalLang('en')" id="global-en" class="global-lang-btn">EN</button>
+                <button onclick="setGlobalLang('jp')" id="global-jp" class="global-lang-btn">JP</button>
+            </div>
+        </div>
         <div class="nav-links" id="dynamicNav"></div>
         
         <div class="filter-section" id="varietySection" style="display:none;">
@@ -230,6 +246,7 @@
             <div id="modalOrigin" style="font-family:var(--font-data); font-size:0.75rem; color:var(--gold); margin-bottom:8px;"></div>
             <div id="modalWineName" style="font-size:1.6rem; font-weight:700; margin-bottom:5px;"></div>
             <div id="modalPrice" style="color:var(--gold); font-weight:600; font-size:1.4rem; margin-bottom:15px;"></div>
+
             <div id="modalDescription"></div>
             <div id="modalMetaInfo" style="text-align:right; font-size:0.75rem; color:var(--light-grey); border-top:1px solid #eee; padding-top:15px; font-family: var(--font-data);"></div>
         </div>
@@ -251,11 +268,16 @@
         let inventory = [], activeCat = 'All', activeBigCat = 'All', isAdmin = false, navOpen = false, currentWine = null;
         const authConfig = { "0000": "Somm_A", "0001": "Somm_B", "0002": "Somm_C", "0003": "Somm_D", "9029": "YK" };
         let staffName = "Digital Menu";
-        const MAX_SLIDER_VAL = 2000000; 
-        
+        const MAX_SLIDER_VAL = 2000000;
+
         let openedBigCategories = new Set();
         let selectedVarieties = [];
         let selectedTags = [];
+
+        // ── 翻譯狀態 ──
+        let currentLang = null;           // null = 顯示原文
+        let currentTranslations = null;   // 快取翻譯
+        let translationRequestId = 0;     // 防止覆蓋
 
         const CATEGORY_ORDER = {
             "By the Glass": 1, "Sparkling Wine": 2, "Rosé": 3, "White Wine": 4, "Red Wine": 5,
@@ -299,7 +321,7 @@
                 const data = await response.json();
                 
                 const fetchedWines = data.wines.map(r => {
-                    // 後端大分類附加
+                    // 後端大分類
                     const computedCategory = r[r.length - 1] || "Others";
                     
                     return {
@@ -591,27 +613,31 @@
         function openWineModalByRef(ref, name) {
             const wine = inventory.find(w => w.ref === ref && w.name === name);
             if (!wine) return;
-            
+
             currentWine = wine;
             const modal = document.getElementById("wineModal");
-            
+
+            // ── 重置翻譯快取 ──
+            currentTranslations = null;
+
             modal.style.display = "block";
             document.getElementById("fixedCloseBtn").style.display = "block";
             document.body.style.overflow = "hidden";
             setTimeout(() => { modal.scrollTop = 0; document.getElementById("modalScrollTarget").scrollTop = 0; }, 10);
-            
+
             document.getElementById("modalWineName").innerText = wine.name + " " + wine.year;
             document.getElementById("modalOrigin").innerText = wine.country + (wine.region ? " | " + wine.region : "") + (wine.sub_region ? " | " + wine.sub_region : "");
             document.getElementById("modalPrice").innerText = "NT$ " + parseInt(wine.price).toLocaleString();
-            
+
+            // 顯示原文
             document.getElementById("modalDescription").innerText = wine.desc || "";
-            
+
             document.getElementById("modalMetaInfo").innerHTML = `BIN: ${wine.bin} | REF: ${wine.ref} | ${wine.size} | Stock: ${wine.stock}`;
             document.getElementById("sommTip").style.display = wine.stock <= 0 ? "block" : "none";
-            
+
             const img = document.getElementById("modalImage");
             if (wine.photo && wine.photo.startsWith("http")) { img.src = wine.photo; img.style.display = "block"; } else { img.style.display = "none"; }
-            
+
             document.getElementById("adminEditor").style.display = isAdmin ? "block" : "none";
             if(isAdmin) {
                 document.getElementById("adminBadge").innerText = `Logged in as: ${staffName.toUpperCase()}`;
@@ -619,6 +645,9 @@
                 document.getElementById("editStock").value = wine.stock;
                 resetBtnState();
             }
+
+            // ── 自動翻譯 ──
+            if (currentLang) fetchTranslation(wine);
         }
 
         function closeModal() { document.getElementById("wineModal").style.display = "none"; document.getElementById("fixedCloseBtn").style.display = "none"; document.body.style.overflow = "auto"; }
@@ -691,6 +720,80 @@
             document.querySelectorAll('.sub-tab-link').forEach(link => { link.classList.toggle('active-sub', link.dataset.category === cat && link.dataset.bigCategory === bigCat); });
             if (navOpen) toggleNav(); 
             filterWines();
+        }
+
+        // =================================================================================
+        // 翻譯功能
+        // =================================================================================
+
+        /**
+         * Menu側欄
+         * - global-lang
+         * - Modal快取&翻譯
+         */
+        function setGlobalLang(lang) {
+            currentLang = lang;
+
+            // 按鈕
+            document.querySelectorAll('.global-lang-btn').forEach(b => b.classList.remove('active-lang'));
+            const activeBtn = document.getElementById('global-' + lang);
+            if (activeBtn) activeBtn.classList.add('active-lang');
+
+            // Modal開啟
+            if (document.getElementById('wineModal').style.display === 'block' && currentWine) {
+                if (currentTranslations) {
+                    document.getElementById('modalDescription').innerText = currentTranslations[lang] || '';
+                } else {
+                    fetchTranslation(currentWine);
+                }
+            }
+        }
+
+        /**
+         * GAS翻譯請求
+         * - GAS不處理OPTIONS
+         * - GAS快取Column V無需呼叫Gemini
+         * - 首次翻譯 → Gemini生成試算表快取
+         * - translationRequestId防止舊請求覆蓋新結果
+         */
+        async function fetchTranslation(wine) {
+            if (!wine || !wine.desc || wine.desc.trim() === '') return;
+
+            const requestId = ++translationRequestId;
+            const descEl = document.getElementById('modalDescription');
+
+            // loading
+            descEl.innerHTML = '<span style="color:#ccc; font-size:0.75rem; font-family:var(--font-data); letter-spacing:2px; animation:breathe 1.5s infinite ease-in-out; display:block; padding:10px 0;">TRANSLATING...</span>';
+
+            try {
+                // 不設Content-Type
+                const res = await fetch(gasUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'translate',
+                        bin:    wine.bin,
+                        ref:    wine.ref,
+                        name:   wine.name,
+                        year:   wine.year,
+                        size:   wine.size
+                    })
+                });
+                const result = await res.json();
+
+                // 切換酒款，丟棄結果
+                if (requestId !== translationRequestId) return;
+
+                if (result.status === 'success' && result.data) {
+                    currentTranslations = result.data;
+                    descEl.innerText = currentTranslations[currentLang] || '';
+                } else {
+                    descEl.innerText = wine.desc || '';
+                }
+            } catch (err) {
+                if (requestId !== translationRequestId) return;
+                descEl.innerText = wine.desc || '';
+                console.error('[Translation] fetch error:', err);
+            }
         }
 
         // 初始化與5秒背景更新
